@@ -35,7 +35,6 @@ async function descargarMedia(tipo) {
         return;
     }
 
-    // Mostrar UI de carga
     loadingArea.classList.remove('hidden');
     resultArea.classList.add('hidden');
     resultArea.innerHTML = '';
@@ -43,30 +42,46 @@ async function descargarMedia(tipo) {
     try {
         const formato = (tipo === 'video') ? '720' : 'mp3';
         
-        // Ahora llamamos a nuestra propia API interna de Vercel
-        // No hay CORS porque Vercel habla con RapidAPI de servidor a servidor
+        // 1. Pedir que inicie la descarga
         const response = await fetch(`/api/download?id=${videoId}&format=${formato}`);
         const data = await response.json();
+        console.log("Ticket recibido:", data);
 
-        console.log("Respuesta recibida:", data);
+        if (data.progressId) {
+            // 2. Si nos dieron un ticket, preguntar cada 2 segundos
+            let descargado = false;
+            let intentos = 0;
 
-        const linkFinal = data.url || data.link || (data.data && data.data.url) || data.downloadUrl;
+            while (!descargado && intentos < 30) { // Máximo 1 minuto de espera
+                intentos++;
+                console.log(`Verificando progreso... intento ${intentos}`);
+                
+                const resProgreso = await fetch(`/api/progress?progressId=${data.progressId}`);
+                const dataProgreso = await resProgreso.json();
+                
+                // Si la API nos devuelve una URL, ya terminó
+                const linkFinal = dataProgreso.url || dataProgreso.link || (dataProgreso.data && dataProgreso.data.url);
 
-        if (linkFinal) {
-            resultArea.innerHTML = `
-                <a href="${linkFinal}" target="_blank" rel="noopener noreferrer" 
-                   class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-green-500/40 w-full">
-                   ⬇️ Descargar ${tipo === 'video' ? 'Video' : 'Audio'}
-                </a>
-            `;
-            resultArea.classList.remove('hidden');
-        } else {
-            throw new Error('No se obtuvo link');
+                if (linkFinal) {
+                    resultArea.innerHTML = `
+                        <a href="${linkFinal}" target="_blank" rel="noopener noreferrer" 
+                           class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-green-500/40 w-full">
+                           ⬇️ Descargar ${tipo === 'video' ? 'Video' : 'Audio'}
+                        </a>
+                    `;
+                    resultArea.classList.remove('hidden');
+                    descargado = true;
+                } else {
+                    // Esperar 2 segundos antes de volver a preguntar
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+            if (!descargado) alert("El video está tardando mucho. Intenta con uno más corto.");
         }
 
     } catch (error) {
         console.error(error);
-        alert('Error al procesar el video. Intenta de nuevo.');
+        alert('Error al procesar. Intenta de nuevo.');
     } finally {
         loadingArea.classList.add('hidden');
     }
