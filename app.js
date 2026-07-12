@@ -41,14 +41,16 @@ async function descargarMedia(tipo) {
 
     try {
         const formato = (tipo === 'video') ? '720' : 'mp3';
+        
+        // 1. Pedir inicio de descarga
         const response = await fetch(`/api/download?id=${videoId}&format=${formato}`);
         const data = await response.json();
+        console.log("Respuesta Inicial (Ticket):", data);
 
         if (data.progressId) {
             let descargado = false;
             let intentos = 0;
-            // Aumentamos a 100 intentos (aprox. 5 minutos de espera)
-            const maxIntentos = 100; 
+            const maxIntentos = 40; // 2 minutos aprox.
 
             while (!descargado && intentos < maxIntentos) {
                 intentos++;
@@ -56,13 +58,19 @@ async function descargarMedia(tipo) {
                 const resProgreso = await fetch(`/api/progress?progressId=${data.progressId}`);
                 const dataProgreso = await resProgreso.json();
                 
-                // IMPORTANTE: Mira la consola para ver qué responde la API
-                console.log("Estado actual:", dataProgreso);
+                // --- ESTO ES LO MÁS IMPORTANTE PARA EL INGENIERO ---
+                console.log(`Intento ${intentos} - Respuesta Completa:`, dataProgreso);
 
-                // Verificamos si ya hay un link de descarga
-                const linkFinal = dataProgreso.url || dataProgreso.link || (dataProgreso.data && dataProgreso.data.url) || dataProgreso.download;
+                // Intentamos capturar el link en cualquier variante posible que use la API
+                const linkFinal = 
+                    dataProgreso.url || 
+                    dataProgreso.link || 
+                    dataProgreso.download || 
+                    dataProgreso.downloadUrl ||
+                    (dataProgreso.data && dataProgreso.data.url);
 
                 if (linkFinal) {
+                    console.log("¡ENLACE ENCONTRADO!", linkFinal);
                     resultArea.innerHTML = `
                         <a href="${linkFinal}" target="_blank" rel="noopener noreferrer" 
                            class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-green-500/40 w-full">
@@ -72,21 +80,25 @@ async function descargarMedia(tipo) {
                     resultArea.classList.remove('hidden');
                     descargado = true;
                 } else {
-                    // Si la API dice que hay error o falló, paramos
-                    if (dataProgreso.status === 'error' || dataProgreso.error) {
-                        alert("La API no puede procesar este video (posiblemente es demasiado largo o tiene copyright).");
+                    // Si la API nos dice explícitamente que falló
+                    if (dataProgreso.status === 'error' || dataProgreso.success === false) {
+                        alert("La API reportó un error: " + (dataProgreso.msg || "Video no soportado"));
                         break;
                     }
-                    // Esperar 3 segundos para no saturar
+                    // Esperar 3 segundos para el siguiente intento
                     await new Promise(resolve => setTimeout(resolve, 3000));
                 }
             }
-            if (!descargado && intentos >= maxIntentos) alert("El video es muy pesado y sigue procesándose. Intenta con uno más corto.");
+            if (!descargado && intentos >= maxIntentos) {
+                alert("Tiempo de espera agotado. Mira la consola para ver qué respondió la API.");
+            }
+        } else {
+            alert("No se recibió un ID de progreso. Revisa la consola.");
         }
 
     } catch (error) {
-        console.error(error);
-        alert('Error de conexión. Intenta de nuevo.');
+        console.error("Error técnico:", error);
+        alert('Error de conexión con el servidor.');
     } finally {
         loadingArea.classList.add('hidden');
     }
