@@ -45,7 +45,8 @@ async function descargarMedia(tipo) {
         const formato = (tipo === 'video') ? '720' : 'mp3';
         
         // URL exacta del EndPoint de Opachi
-        const peticionUrl = `https://${API_HOST}/api/v1/download?format=${formato}&id=${videoId}&audioQuality=128&addInfo=false&allowExtendedDuration=false`;
+        // Agregamos un proxy gratuito para saltar el bloqueo de seguridad (CORS)
+const peticionUrl = `https://corsproxy.io/?${encodeURIComponent(`https://${API_HOST}/api/v1/download?format=${formato}&id=${videoId}&audioQuality=128&addInfo=false&allowExtendedDuration=false`)}`;
 
         const options = {
             method: 'GET',
