@@ -41,26 +41,26 @@ async function descargarMedia(tipo) {
 
     try {
         const formato = (tipo === 'video') ? '720' : 'mp3';
-        
-        // 1. Pedir que inicie la descarga
         const response = await fetch(`/api/download?id=${videoId}&format=${formato}`);
         const data = await response.json();
-        console.log("Ticket recibido:", data);
 
         if (data.progressId) {
-            // 2. Si nos dieron un ticket, preguntar cada 2 segundos
             let descargado = false;
             let intentos = 0;
+            // Aumentamos a 100 intentos (aprox. 5 minutos de espera)
+            const maxIntentos = 100; 
 
-            while (!descargado && intentos < 30) { // Máximo 1 minuto de espera
+            while (!descargado && intentos < maxIntentos) {
                 intentos++;
-                console.log(`Verificando progreso... intento ${intentos}`);
                 
                 const resProgreso = await fetch(`/api/progress?progressId=${data.progressId}`);
                 const dataProgreso = await resProgreso.json();
                 
-                // Si la API nos devuelve una URL, ya terminó
-                const linkFinal = dataProgreso.url || dataProgreso.link || (dataProgreso.data && dataProgreso.data.url);
+                // IMPORTANTE: Mira la consola para ver qué responde la API
+                console.log("Estado actual:", dataProgreso);
+
+                // Verificamos si ya hay un link de descarga
+                const linkFinal = dataProgreso.url || dataProgreso.link || (dataProgreso.data && dataProgreso.data.url) || dataProgreso.download;
 
                 if (linkFinal) {
                     resultArea.innerHTML = `
@@ -72,16 +72,21 @@ async function descargarMedia(tipo) {
                     resultArea.classList.remove('hidden');
                     descargado = true;
                 } else {
-                    // Esperar 2 segundos antes de volver a preguntar
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Si la API dice que hay error o falló, paramos
+                    if (dataProgreso.status === 'error' || dataProgreso.error) {
+                        alert("La API no puede procesar este video (posiblemente es demasiado largo o tiene copyright).");
+                        break;
+                    }
+                    // Esperar 3 segundos para no saturar
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
             }
-            if (!descargado) alert("El video está tardando mucho. Intenta con uno más corto.");
+            if (!descargado && intentos >= maxIntentos) alert("El video es muy pesado y sigue procesándose. Intenta con uno más corto.");
         }
 
     } catch (error) {
         console.error(error);
-        alert('Error al procesar. Intenta de nuevo.');
+        alert('Error de conexión. Intenta de nuevo.');
     } finally {
         loadingArea.classList.add('hidden');
     }
