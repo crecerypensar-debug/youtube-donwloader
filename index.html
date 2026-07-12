@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT Downloader Pro</title>
+    <!-- Enlazamos el manifest para la PWA -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Tailwind CSS (Vía CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <!-- Tarjeta Principal -->
+    <div class="bg-slate-800/50 backdrop-blur-md border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                YT Downloader
+            </h1>
+            <p class="text-slate-400 mt-2 text-sm">Pega la URL o usa "Compartir" desde YouTube</p>
+        </div>
+
+        <!-- Formulario de Entrada -->
+        <div class="space-y-4">
+            <input 
+                type="url" 
+                id="urlInput" 
+                placeholder="https://youtu.be/..." 
+                class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
+                required>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="descargarMedia('video')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/30">
+                    🎬 Video (MP4)
+                </button>
+                <button onclick="descargarMedia('audio')" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-500/30">
+                    🎵 Audio (MP3)
+                </button>
+            </div>
+        </div>
+
+        <!-- Animación de carga -->
+        <div id="loadingArea" class="hidden mt-6 text-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p class="text-slate-400 text-sm mt-2">Extrayendo archivo... espera unos segundos.</p>
+        </div>
+
+        <!-- Botón de resultado final -->
+        <div id="resultArea" class="hidden mt-6 text-center">
+            <!-- Aquí aparecerá el botón verde por JavaScript -->
+        </div>
+
+    </div>
+
+    <!-- Enlazamos la lógica -->
+    <script src="app.js"></script>
+</body>
+</html>
