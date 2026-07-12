@@ -3,57 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YT Downloader Pro</title>
-    <!-- Enlazamos el manifest para la PWA -->
+    <title>YT Downloader Ultra</title>
     <link rel="manifest" href="manifest.json">
-    <!-- Tailwind CSS (Vía CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+    </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-950 text-slate-200 min-h-screen flex items-center justify-center p-4 font-sans">
 
-    <!-- Tarjeta Principal -->
-    <div class="bg-slate-800/50 backdrop-blur-md border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="glass border border-slate-700 p-6 rounded-3xl shadow-2xl w-full max-w-md">
         
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                YT Downloader
+        <header class="text-center mb-6">
+            <h1 class="text-2xl font-black tracking-tighter bg-gradient-to-br from-white to-slate-500 bg-clip-text text-transparent italic">
+                YT DOWNLOADER ULTRA
             </h1>
-            <p class="text-slate-400 mt-2 text-sm">Pega la URL o usa "Compartir" desde YouTube</p>
+            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">High Quality Extraction</p>
+        </header>
+
+        <!-- Input de URL -->
+        <div class="relative mb-6">
+            <input type="url" id="urlInput" placeholder="Pega el enlace de YouTube aquí..." 
+                class="w-full pl-4 pr-4 py-4 bg-slate-900/50 border border-slate-700 rounded-2xl focus:outline-none focus:border-blue-500 transition-all text-sm">
         </div>
 
-        <!-- Formulario de Entrada -->
-        <div class="space-y-4">
-            <input 
-                type="url" 
-                id="urlInput" 
-                placeholder="https://youtu.be/..." 
-                class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
-                required>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="descargarMedia('video')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/30">
-                    🎬 Video (MP4)
-                </button>
-                <button onclick="descargarMedia('audio')" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-purple-500/30">
-                    🎵 Audio (MP3)
-                </button>
+        <!-- Selector de Tipo (Pestañas) -->
+        <div class="flex border-b border-slate-800 mb-6">
+            <button id="tabVideo" onclick="switchTab('video')" class="flex-1 py-3 text-sm font-bold tab-active">VIDEO</button>
+            <button id="tabAudio" onclick="switchTab('audio')" class="flex-1 py-3 text-sm font-bold text-slate-500">SOLO AUDIO</button>
+        </div>
+
+        <!-- Opciones de Calidad -->
+        <div class="space-y-4 mb-8">
+            <div id="videoOptions">
+                <label class="text-[10px] uppercase font-bold text-slate-500 mb-2 block">Resolución de Video</label>
+                <select id="videoQuality" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none">
+                    <option value="1080">1080p (Full HD - Máxima calidad)</option>
+                    <option value="720" selected>720p (HD - Recomendado)</option>
+                    <option value="480">480p (Calidad estándar)</option>
+                </select>
+            </div>
+
+            <div id="audioOptions" class="hidden">
+                <label class="text-[10px] uppercase font-bold text-slate-500 mb-2 block">Bitrate de Audio (MP3)</label>
+                <select id="audioQuality" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none">
+                    <option value="320">320 kbps (Calidad de estudio)</option>
+                    <option value="192" selected>192 kbps (Alta fidelidad)</option>
+                    <option value="128">128 kbps (Estándar)</option>
+                </select>
             </div>
         </div>
 
-        <!-- Animación de carga -->
-        <div id="loadingArea" class="hidden mt-6 text-center">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p class="text-slate-400 text-sm mt-2">Extrayendo archivo... espera unos segundos.</p>
+        <!-- Botón de Acción -->
+        <button id="btnMain" onclick="procesarDescarga()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-blue-900/20 active:scale-95 uppercase tracking-tighter">
+            Empezar Conversión
+        </button>
+
+        <!-- Estado / Loading -->
+        <div id="loadingArea" class="hidden mt-8 text-center animate-pulse">
+            <div class="w-12 h-1 h-1 bg-blue-500 mx-auto rounded-full mb-4"></div>
+            <p id="statusText" class="text-xs font-mono text-blue-400">Iniciando servidores...</p>
         </div>
 
-        <!-- Botón de resultado final -->
-        <div id="resultArea" class="hidden mt-6 text-center">
-            <!-- Aquí aparecerá el botón verde por JavaScript -->
-        </div>
+        <!-- Resultado -->
+        <div id="resultArea" class="hidden mt-8"></div>
 
     </div>
 
-    <!-- Enlazamos la lógica -->
     <script src="app.js"></script>
 </body>
 </html>

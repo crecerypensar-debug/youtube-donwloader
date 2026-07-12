@@ -1,104 +1,80 @@
-// --- CONFIGURACIÓN DE TU API (OPACHI) ---
-const API_KEY = 'd34fae19f9mshabcb085f9847622p12881cjsn960d55f8645b'; 
-const API_HOST = 'youtube-mp4-mp3-downloader.p.rapidapi.com';
+let currentMode = 'video';
 
-// 1. Interceptar el "Compartir" de Android (Web Share Target)
-window.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const sharedUrl = params.get('url') || params.get('text');
-    
-    if (sharedUrl && (sharedUrl.includes('youtube.com') || sharedUrl.includes('youtu.be'))) {
-        const regex = /(https?:\/\/[^\s]+)/g;
-        const urls = sharedUrl.match(regex);
-        if (urls && urls.length > 0) {
-            document.getElementById('urlInput').value = urls[0];
-        }
-    }
-});
+function switchTab(mode) {
+    currentMode = mode;
+    document.getElementById('videoOptions').classList.toggle('hidden', mode === 'audio');
+    document.getElementById('audioOptions').classList.toggle('hidden', mode === 'video');
+    document.getElementById('tabVideo').className = mode === 'video' ? 'flex-1 py-3 text-sm font-bold tab-active' : 'flex-1 py-3 text-sm font-bold text-slate-500';
+    document.getElementById('tabAudio').className = mode === 'audio' ? 'flex-1 py-3 text-sm font-bold tab-active' : 'flex-1 py-3 text-sm font-bold text-slate-500';
+}
 
-// 2. Extraer el ID exacto del video (las 11 letras)
 function extraerIdYoutube(url) {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
     const match = url.match(regex);
     return match ? match[1] : null;
 }
 
-// 3. Función Principal de Petición
-async function descargarMedia(tipo) {
-    const urlInput = document.getElementById('urlInput').value;
+async function procesarDescarga() {
+    const url = document.getElementById('urlInput').value;
+    const vQ = document.getElementById('videoQuality').value;
+    const aQ = document.getElementById('audioQuality').value;
+    const videoId = extraerIdYoutube(url);
+
+    if (!videoId) return alert("Por favor, pega un enlace válido.");
+
     const loadingArea = document.getElementById('loadingArea');
     const resultArea = document.getElementById('resultArea');
-
-    const videoId = extraerIdYoutube(urlInput);
-    if (!videoId) {
-        alert('Por favor, ingresa una URL válida de YouTube.');
-        return;
-    }
+    const statusText = document.getElementById('statusText');
 
     loadingArea.classList.remove('hidden');
     resultArea.classList.add('hidden');
     resultArea.innerHTML = '';
 
     try {
-        const formato = (tipo === 'video') ? '720' : 'mp3';
+        const format = currentMode === 'audio' ? 'mp3' : vQ;
         
-        // 1. Pedir inicio de descarga
-        const response = await fetch(`/api/download?id=${videoId}&format=${formato}`);
+        // 1. Enviar petición al servidor de Vercel
+        statusText.innerText = "Solicitando video a los servidores...";
+        const response = await fetch(`/api/download?id=${videoId}&format=${format}&audioQuality=${aQ}`);
         const data = await response.json();
-        console.log("Respuesta Inicial (Ticket):", data);
 
         if (data.progressId) {
-            let descargado = false;
-            let intentos = 0;
-            const maxIntentos = 40; // 2 minutos aprox.
+            let completado = false;
+            let checks = 0;
 
-            while (!descargado && intentos < maxIntentos) {
-                intentos++;
+            // Bucle persistente (espera hasta 15 minutos para videos largos)
+            while (!completado && checks < 300) {
+                checks++;
+                const res = await fetch(`/api/progress?progressId=${data.progressId}`);
+                const prog = await res.json();
                 
-                const resProgreso = await fetch(`/api/progress?progressId=${data.progressId}`);
-                const dataProgreso = await resProgreso.json();
-                
-                // --- ESTO ES LO MÁS IMPORTANTE PARA EL INGENIERO ---
-                console.log(`Intento ${intentos} - Respuesta Completa:`, dataProgreso);
+                // Actualizar UI según el progreso que devuelva la API
+                if (prog.progress) {
+                    statusText.innerText = `PROCESANDO: ${prog.progress / 10}% COMPLETADO...`;
+                } else {
+                    statusText.innerText = `ESTO PUEDE TARDAR (Intento ${checks})... NO CIERRES.`;
+                }
 
-                // Intentamos capturar el link en cualquier variante posible que use la API
-                const linkFinal = 
-                    dataProgreso.url || 
-                    dataProgreso.link || 
-                    dataProgreso.download || 
-                    dataProgreso.downloadUrl ||
-                    (dataProgreso.data && dataProgreso.data.url);
+                const link = prog.url || prog.link || (prog.data && prog.data.url);
 
-                if (linkFinal) {
-                    console.log("¡ENLACE ENCONTRADO!", linkFinal);
+                if (link) {
                     resultArea.innerHTML = `
-                        <a href="${linkFinal}" target="_blank" rel="noopener noreferrer" 
-                           class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-green-500/40 w-full">
-                           ⬇️ Descargar ${tipo === 'video' ? 'Video' : 'Audio'}
-                        </a>
+                        <div class="p-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl">
+                            <a href="${link}" target="_blank" class="block bg-slate-950 text-white text-center font-bold py-4 rounded-[calc(1rem-2px)] hover:bg-slate-900 transition-all">
+                                ⬇️ DESCARGAR ARCHIVO FINAL
+                            </a>
+                        </div>
+                        <button onclick="location.reload()" class="w-full mt-4 text-[10px] text-slate-500 uppercase tracking-widest font-bold">Limpiar y nueva descarga</button>
                     `;
                     resultArea.classList.remove('hidden');
-                    descargado = true;
+                    completado = true;
                 } else {
-                    // Si la API nos dice explícitamente que falló
-                    if (dataProgreso.status === 'error' || dataProgreso.success === false) {
-                        alert("La API reportó un error: " + (dataProgreso.msg || "Video no soportado"));
-                        break;
-                    }
-                    // Esperar 3 segundos para el siguiente intento
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    await new Promise(r => setTimeout(r, 3000));
                 }
             }
-            if (!descargado && intentos >= maxIntentos) {
-                alert("Tiempo de espera agotado. Mira la consola para ver qué respondió la API.");
-            }
-        } else {
-            alert("No se recibió un ID de progreso. Revisa la consola.");
         }
-
-    } catch (error) {
-        console.error("Error técnico:", error);
-        alert('Error de conexión con el servidor.');
+    } catch (e) {
+        statusText.innerText = "Error de conexión. Intenta de nuevo.";
     } finally {
         loadingArea.classList.add('hidden');
     }
