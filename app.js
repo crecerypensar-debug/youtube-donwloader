@@ -41,27 +41,15 @@ async function descargarMedia(tipo) {
     resultArea.innerHTML = '';
 
     try {
-        // Formato: 720 (video) o mp3 (audio)
         const formato = (tipo === 'video') ? '720' : 'mp3';
         
-        // URL exacta del EndPoint de Opachi
-        // Agregamos un proxy gratuito para saltar el bloqueo de seguridad (CORS)
-const peticionUrl = `https://corsproxy.io/?${encodeURIComponent(`https://${API_HOST}/api/v1/download?format=${formato}&id=${videoId}&audioQuality=128&addInfo=false&allowExtendedDuration=false`)}`;
-
-        const options = {
-            method: 'GET',
-            headers: {
-                'X-RapidAPI-Key': API_KEY,
-                'X-RapidAPI-Host': API_HOST
-            }
-        };
-
-        const response = await fetch(peticionUrl, options);
+        // Ahora llamamos a nuestra propia API interna de Vercel
+        // No hay CORS porque Vercel habla con RapidAPI de servidor a servidor
+        const response = await fetch(`/api/download?id=${videoId}&format=${formato}`);
         const data = await response.json();
 
-        console.log("Respuesta de RapidAPI:", data);
+        console.log("Respuesta recibida:", data);
 
-        // La API de Opachi suele devolver el link en data.url o data.download
         const linkFinal = data.url || data.link || (data.data && data.data.url) || data.downloadUrl;
 
         if (linkFinal) {
@@ -70,16 +58,15 @@ const peticionUrl = `https://corsproxy.io/?${encodeURIComponent(`https://${API_H
                    class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-green-500/40 w-full">
                    ⬇️ Descargar ${tipo === 'video' ? 'Video' : 'Audio'}
                 </a>
-                <p class="text-xs text-slate-400 mt-3">Si no descarga automáticamente, haz clic en el botón de los 3 puntos del reproductor y dale a "Descargar".</p>
             `;
             resultArea.classList.remove('hidden');
         } else {
-            throw new Error('La API no devolvió el enlace. Revisa la consola.');
+            throw new Error('No se obtuvo link');
         }
 
     } catch (error) {
         console.error(error);
-        alert('Hubo un error al procesar el video. Puede ser restricción de la API o del video (copyright).');
+        alert('Error al procesar el video. Intenta de nuevo.');
     } finally {
         loadingArea.classList.add('hidden');
     }
