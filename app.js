@@ -16,7 +16,8 @@ function extraerIdYoutube(url) {
 
 async function procesarDescarga() {
     const urlInput = document.getElementById('urlInput').value;
-    const vQ = document.getElementById('videoQuality').value;
+    const vQ = document.getElementById('videoQuality').value; // Ej: 360, 720, 1080
+    const aQ = parseInt(document.getElementById('audioQuality').value); // Ej: 128, 192, 320
     const videoId = extraerIdYoutube(urlInput);
 
     if (!videoId) return alert("Por favor, ingresa una url válida.");
@@ -28,7 +29,7 @@ async function procesarDescarga() {
     loadingArea.classList.remove('hidden');
     resultArea.classList.add('hidden');
     resultArea.innerHTML = '';
-    statusText.innerText = "Conectando con servidores de Google...";
+    statusText.innerText = "Analizando archivos disponibles...";
 
     try {
         const response = await fetch(`/api/download?id=${videoId}`);
@@ -38,40 +39,48 @@ async function procesarDescarga() {
         let info = "";
 
         if (currentMode === 'video') {
-            const listaVideos = data.videos?.items || [];
-            // Buscamos el video pedido que tenga audio
-            let match = listaVideos.find(v => v.quality === vQ + 'p' && v.hasAudio);
+            const videos = data.videos?.items || [];
+            // FILTRADO ESTRICTO: Buscamos exactamente la resolución pedida
+            let match = videos.find(v => v.quality === vQ + 'p' && v.hasAudio);
             
             if (!match) {
-                // Si no hay el exacto con audio (común en 1080p), buscamos el mejor disponible con audio
-                match = listaVideos.filter(v => v.hasAudio).sort((a,b) => b.width - a.width)[0];
-                info = `Calidad real: ${match?.quality} (con audio)`;
+                // Si no hay el pedido, buscamos el más cercano disponible con audio
+                match = videos.filter(v => v.hasAudio).sort((a,b) => b.width - a.width)[0];
+                info = `Calidad original ajustada a ${match?.quality}`;
             } else {
-                info = `Calidad real: ${vQ}p HD`;
+                info = `Resolución original: ${vQ}p`;
             }
             enlaceFinal = match?.url;
+
         } else {
-            // Buscamos el stream de audio con mayor bitrate
-            const listaAudios = data.audios?.items || [];
-            const mejorAudio = listaAudios.sort((a,b) => b.bitrate - a.bitrate)[0];
-            enlaceFinal = mejorAudio?.url;
-            info = `Audio extraído a ${Math.floor(mejorAudio?.bitrate / 1000)} kbps`;
+            const audios = data.audios?.items || [];
+            // YouTube suele tener bitrates de aprox 64000, 128000 y 160000.
+            // Convertimos tu selección (ej 128) a formato de la API (128000)
+            const targetBitrate = aQ * 1000;
+
+            // LÓGICA DE FILTRADO: Buscamos el audio cuyo bitrate sea el más cercano al pedido
+            const match = audios.sort((a, b) => {
+                return Math.abs(a.bitrate - targetBitrate) - Math.abs(b.bitrate - targetBitrate);
+            })[0];
+
+            enlaceFinal = match?.url;
+            info = `Audio real extraído: ${Math.floor(match?.bitrate / 1000)} kbps`;
         }
 
         if (enlaceFinal) {
-            statusText.innerText = "¡Enlace extraído con éxito!";
+            statusText.innerText = "¡Archivo encontrado!";
             resultArea.innerHTML = `
                 <div class="p-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                    <a href="${enlaceFinal}" target="_blank" download class="block bg-slate-950 text-white text-center font-bold py-4 rounded-[calc(1rem-2px)] hover:bg-slate-900 transition-all">
+                    <a href="${enlaceFinal}" target="_blank" class="block bg-slate-950 text-white text-center font-bold py-4 rounded-[calc(1rem-2px)] hover:bg-slate-900 transition-all">
                         Descargar archivo real
                     </a>
                 </div>
-                <p class="text-[10px] text-slate-500 mt-3 text-center uppercase tracking-widest font-bold opacity-60">${info}</p>
+                <p class="text-[10px] text-slate-500 mt-2 text-center uppercase tracking-tighter italic font-bold opacity-70">${info}</p>
                 <button onclick="location.reload()" class="w-full mt-4 text-[10px] text-slate-400 underline">Nueva descarga</button>
             `;
             resultArea.classList.remove('hidden');
         } else {
-            alert("No se encontró un archivo compatible para este video.");
+            alert("No se encontró un formato compatible.");
         }
     } catch (e) {
         statusText.innerText = "Error o límite de API alcanzado.";
