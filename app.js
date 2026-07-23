@@ -14,13 +14,33 @@ function extraerIdYoutube(url) {
     return match ? match[1] : null;
 }
 
+// MAGIA TÉCNICA: Descarga el archivo sin abrir nuevas pestañas
+async function forzarDescarga(url, nombreArchivo) {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const urlBlob = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = urlBlob;
+        a.download = nombreArchivo;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(urlBlob);
+    } catch (e) {
+        // Si el archivo es demasiado grande (>100MB), el navegador podría fallar con blobs. 
+        // En ese caso, abrimos en pestaña nueva como respaldo.
+        window.open(url, '_blank');
+    }
+}
+
 async function procesarDescarga() {
     const urlInput = document.getElementById('urlInput').value;
-    const vQ = document.getElementById('videoQuality').value; // Ej: 360, 720, 1080
-    const aQ = parseInt(document.getElementById('audioQuality').value); // Ej: 128, 192, 320
+    const vQ = document.getElementById('videoQuality').value;
+    const aQ = document.getElementById('audioQuality').value;
     const videoId = extraerIdYoutube(urlInput);
 
-    if (!videoId) return alert("Por favor, ingresa una url válida.");
+    if (!videoId) return alert("URL no válida");
 
     const loadingArea = document.getElementById('loadingArea');
     const resultArea = document.getElementById('resultArea');
@@ -28,63 +48,54 @@ async function procesarDescarga() {
 
     loadingArea.classList.remove('hidden');
     resultArea.classList.add('hidden');
-    resultArea.innerHTML = '';
-    statusText.innerText = "Analizando archivos disponibles...";
 
     try {
-        const response = await fetch(`/api/download?id=${videoId}`);
+        const format = currentMode === 'audio' ? 'mp3' : vQ;
+        statusText.innerText = `Convirtiendo a ${currentMode === 'audio' ? aQ + 'kbps' : vQ + 'p'}...`;
+
+        const response = await fetch(`/api/download?id=${videoId}&format=${format}&audioQuality=${aQ}`);
         const data = await response.json();
 
-        let enlaceFinal = null;
-        let info = "";
-
-        if (currentMode === 'video') {
-            const videos = data.videos?.items || [];
-            // FILTRADO ESTRICTO: Buscamos exactamente la resolución pedida
-            let match = videos.find(v => v.quality === vQ + 'p' && v.hasAudio);
-            
-            if (!match) {
-                // Si no hay el pedido, buscamos el más cercano disponible con audio
-                match = videos.filter(v => v.hasAudio).sort((a,b) => b.width - a.width)[0];
-                info = `Calidad original ajustada a ${match?.quality}`;
-            } else {
-                info = `Resolución original: ${vQ}p`;
-            }
-            enlaceFinal = match?.url;
-
-        } else {
-            const audios = data.audios?.items || [];
-            // YouTube suele tener bitrates de aprox 64000, 128000 y 160000.
-            // Convertimos tu selección (ej 128) a formato de la API (128000)
-            const targetBitrate = aQ * 1000;
-
-            // LÓGICA DE FILTRADO: Buscamos el audio cuyo bitrate sea el más cercano al pedido
-            const match = audios.sort((a, b) => {
-                return Math.abs(a.bitrate - targetBitrate) - Math.abs(b.bitrate - targetBitrate);
-            })[0];
-
-            enlaceFinal = match?.url;
-            info = `Audio real extraído: ${Math.floor(match?.bitrate / 1000)} kbps`;
-        }
+        // Esta API suele devolver el link en data.result o data.link
+        const enlaceFinal = data.result || data.link || data.download;
 
         if (enlaceFinal) {
-            statusText.innerText = "¡Archivo encontrado!";
+            statusText.innerText = "¡Conversión exitosa!";
+            
+            // Creamos un nombre amigable para el archivo
+            const extension = currentMode === 'audio' ? '.mp3' : '.mp4';
+            const nombreFinal = `YT_Download_${videoId}${extension}`;
+
             resultArea.innerHTML = `
-                <div class="p-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                    <a href="${enlaceFinal}" target="_blank" class="block bg-slate-950 text-white text-center font-bold py-4 rounded-[calc(1rem-2px)] hover:bg-slate-900 transition-all">
-                        Descargar archivo real
-                    </a>
+                <div class="space-y-4">
+                    <button onclick="descargarAhora('${enlaceFinal}', '${nombreFinal}')" 
+                        class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-2xl shadow-lg transition-all uppercase tracking-tighter">
+                        ⬇️ Guardar en mi dispositivo
+                    </button>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold text-center italic">
+                        Formato: ${extension.toUpperCase()} | Calidad: ${currentMode === 'audio' ? aQ + 'kbps' : vQ + 'p'}
+                    </p>
                 </div>
-                <p class="text-[10px] text-slate-500 mt-2 text-center uppercase tracking-tighter italic font-bold opacity-70">${info}</p>
-                <button onclick="location.reload()" class="w-full mt-4 text-[10px] text-slate-400 underline">Nueva descarga</button>
             `;
             resultArea.classList.remove('hidden');
-        } else {
-            alert("No se encontró un formato compatible.");
         }
     } catch (e) {
-        statusText.innerText = "Error o límite de API alcanzado.";
+        statusText.innerText = "Error. Verifica el plan de tu API.";
     } finally {
         loadingArea.classList.add('hidden');
     }
+}
+
+// Función que llama a la descarga forzada
+function descargarAhora(url, nombre) {
+    const statusText = document.getElementById('statusText');
+    const loadingArea = document.getElementById('loadingArea');
+    
+    loadingArea.classList.remove('hidden');
+    statusText.innerText = "Iniciando transferencia al dispositivo...";
+    
+    forzarDescarga(url, nombre).then(() => {
+        loadingArea.classList.add('hidden');
+        statusText.innerText = "¡Descarga completada!";
+    });
 }
