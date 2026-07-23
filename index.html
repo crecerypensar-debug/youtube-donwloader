@@ -19,7 +19,7 @@
             <h1 class="text-2xl font-black tracking-tighter bg-gradient-to-br from-white to-slate-500 bg-clip-text text-transparent italic">
                 YT DOWNLOADER ULTRA
             </h1>
-            <p class="text-slate-500 text-[10px] mt-1 uppercase tracking-[0.2em]">Extracción de alta calidad</p>
+            <p class="text-slate-500 text-[10px] mt-1 uppercase tracking-widest">Extracción de alta calidad</p>
         </header>
 
         <div class="relative mb-6">
@@ -36,9 +36,9 @@
             <div id="videoOptions">
                 <label class="text-[10px] uppercase font-bold text-slate-500 mb-2 block tracking-widest">Resolución de video</label>
                 <select id="videoQuality" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none">
-                    <option value="1080">1080p (Full HD)</option>
-                    <option value="720" selected>720p (HD - Recomendado)</option>
-                    <option value="480">480p (Estándar)</option>
+                    <option value="1080">1080p (Full hd)</option>
+                    <option value="720" selected>720p (Hd - Recomendado)</option>
+                    <option value="480">480p (Calidad estándar)</option>
                     <option value="360">360p (Ahorro de datos)</option>
                 </select>
             </div>
@@ -46,8 +46,8 @@
             <div id="audioOptions" class="hidden">
                 <label class="text-[10px] uppercase font-bold text-slate-500 mb-2 block tracking-widest">Calidad de audio</label>
                 <select id="audioQuality" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none">
-                    <option value="320">320 kbps (Estudio)</option>
-                    <option value="192" selected>192 kbps (Alta)</option>
+                    <option value="320">320 kbps (Calidad de estudio)</option>
+                    <option value="192" selected>192 kbps (Alta fidelidad)</option>
                     <option value="128">128 kbps (Estándar)</option>
                 </select>
             </div>
@@ -58,8 +58,8 @@
         </button>
 
         <div id="loadingArea" class="hidden mt-8 text-center">
-            <div class="w-12 h-1 bg-blue-500 mx-auto rounded-full mb-4 animate-bounce"></div>
-            <p id="statusText" class="text-xs font-medium text-blue-400 italic">Buscando archivos originales...</p>
+            <div class="w-12 h-1 bg-blue-500 mx-auto rounded-full mb-4 animate-pulse"></div>
+            <p id="statusText" class="text-xs font-medium text-blue-400">Iniciando servidores...</p>
         </div>
 
         <div id="resultArea" class="hidden mt-8"></div>
